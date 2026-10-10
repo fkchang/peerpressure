@@ -1,6 +1,6 @@
 require "fileutils"
 
-RSpec.describe AgentPeers::Registration do
+RSpec.describe PeerPressure::Registration do
   include FakeFleet
 
   let(:sock_dir) { File.join(tmp, "socks").tap { |d| FileUtils.mkdir_p(d, mode: 0o700) } }
@@ -19,7 +19,7 @@ RSpec.describe AgentPeers::Registration do
 
   it "shows up in the registry while open and disappears after stop" do
     reg.start
-    reg_view = AgentPeers::Registry.new(config_dir: tmp, exclude_self: false)
+    reg_view = PeerPressure::Registry.new(config_dir: tmp, exclude_self: false)
     expect(reg_view.peers.map(&:name)).to include("canvas")
     reg.stop
     expect(reg_view.peers.map(&:name)).not_to include("canvas")

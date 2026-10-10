@@ -1,4 +1,4 @@
-module AgentPeers
+module PeerPressure
   # An inbound frame, parsed. kind is :message (a peer wrote to us), :receipt (delivery status
   # for something we sent: held, denied, expired, delivered, dropped, refused) or :idle (a
   # notify_when_idle subscription fired).

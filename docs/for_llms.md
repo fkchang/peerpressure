@@ -1,23 +1,23 @@
-# agent_peers for LLMs
+# peerpressure for LLMs
 
-Ruby gem + CLI (`exe/agent-peers`) to discover and message live Claude Code and Codex sessions.
+Ruby gem + CLI (`exe/peer`) to discover and message live Claude Code and Codex sessions.
 
 ## API
 
 | Call | Returns |
 |---|---|
-| `AgentPeers.list(config_dir:, exclude_self:)` | `Peer[]`, newest first (`session_id, name, kind(:claude/:codex), pid, cwd, status, started_at, socket_path`) |
-| `AgentPeers.find(ref)` | one `Peer`; raises `NotFound` / `Ambiguous` |
-| `AgentPeers.send_message(ref, text, from_label:, wait: 0)` | `{delivery: Delivery, messages: [Message]}`; `Delivery#status` is `:unconfirmed` (no receipt: NOT proof of delivery), `:held`, `:denied`, `:expired`, `:dropped`, `:refused`, `:delivered`; raises `Undeliverable` |
-| `AgentPeers::Session.new(name:).start` | long-lived peer: `send_message`, `delivery(id)`, `on_message`, `inbox`, `wait_for(from_session:, timeout:)`, `reply(msg, text)`, `notify_when_idle(ref)`, `receipts_for(id)`, `stop` |
+| `PeerPressure.list(config_dir:, exclude_self:)` | `Peer[]`, newest first (`session_id, name, kind(:claude/:codex), pid, cwd, status, started_at, socket_path`) |
+| `PeerPressure.find(ref)` | one `Peer`; raises `NotFound` / `Ambiguous` |
+| `PeerPressure.send_message(ref, text, from_label:, wait: 0)` | `{delivery: Delivery, messages: [Message]}`; `Delivery#status` is `:unconfirmed` (no receipt: NOT proof of delivery), `:held`, `:denied`, `:expired`, `:dropped`, `:refused`, `:delivered`; raises `Undeliverable` |
+| `PeerPressure::Session.new(name:).start` | long-lived peer: `send_message`, `delivery(id)`, `on_message`, `inbox`, `wait_for(from_session:, timeout:)`, `reply(msg, text)`, `notify_when_idle(ref)`, `receipts_for(id)`, `stop` |
 
 ## Files
 
-- `lib/agent_peers/registry.rb`: reads `<config>/sessions/*.json`, liveness = `kill -0` + socket file; `find` order is sessionId, pid, exact name, sessionId prefix.
-- `lib/agent_peers/sender.rb`: the ONLY file that knows the wire format (`type:"user", msgV:1, msg_id, from, session_id, priority:"next", message:{role,content}`, newline-delimited JSON). Content is prefixed `[from LABEL]` because the socket shows no sender name.
-- `lib/agent_peers/registration.rb`: registers THIS process (row + 0600 socket in a 0700 dir + accept loop into `#frames`). Required because the Codex receiver drops frames whose `from` isn't a live registered peer (`bridge.ts receive()`), silently. Hold one open for long-lived callers (canvas) so replies can arrive.
-- `lib/agent_peers/session.rb`, `message.rb`, `delivery.rb`: long-lived wrapper, parsed inbound frames (message / receipt / idle, envelope unwrapped), and the status fold.
-- `lib/agent_peers/peer.rb`: `kind` is `:codex` iff `entrypoint == "codex-claude-uds-bridge"`.
+- `lib/peerpressure/registry.rb`: reads `<config>/sessions/*.json`, liveness = `kill -0` + socket file; `find` order is sessionId, pid, exact name, sessionId prefix.
+- `lib/peerpressure/sender.rb`: the ONLY file that knows the wire format (`type:"user", msgV:1, msg_id, from, session_id, priority:"next", message:{role,content}`, newline-delimited JSON). Content is prefixed `[from LABEL]` because the socket shows no sender name.
+- `lib/peerpressure/registration.rb`: registers THIS process (row + 0600 socket in a 0700 dir + accept loop into `#frames`). Required because the Codex receiver drops frames whose `from` isn't a live registered peer (`bridge.ts receive()`), silently. Hold one open for long-lived callers (canvas) so replies can arrive.
+- `lib/peerpressure/session.rb`, `message.rb`, `delivery.rb`: long-lived wrapper, parsed inbound frames (message / receipt / idle, envelope unwrapped), and the status fold.
+- `lib/peerpressure/peer.rb`: `kind` is `:codex` iff `entrypoint == "codex-claude-uds-bridge"`.
 
 ## Gotchas
 

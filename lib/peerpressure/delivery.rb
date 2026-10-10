@@ -1,4 +1,4 @@
-module AgentPeers
+module PeerPressure
   # What we know about one sent message. Ordinary acceptance sends NO receipt, so :unconfirmed
   # means "bytes written, nothing said against it" and is not proof the session read it. The
   # other statuses come from the receiver: held (waiting on its user), denied, expired, dropped,

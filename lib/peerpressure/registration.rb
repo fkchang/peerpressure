@@ -5,13 +5,13 @@ require "open3"
 require "fileutils"
 require "time"
 
-module AgentPeers
+module PeerPressure
   # Registers THIS process as a peer: a <config>/sessions/<pid>.json record plus an inbox socket.
   # The Codex bridge silently drops any frame whose `from` is not a registered, live peer's socket
   # address (Claude sessions do not check), so a sender must be registered while it sends. Replies
   # and delivery receipts arrive on this socket and are collected in #frames.
   class Registration
-    SOCK_DIR = ENV["AGENT_PEERS_SOCK_DIR"] || "/tmp/cc-socks"
+    SOCK_DIR = ENV["PEERPRESSURE_SOCK_DIR"] || "/tmp/cc-socks"
 
     attr_reader :session_id, :socket_path, :frames
 
@@ -24,7 +24,7 @@ module AgentPeers
       end
     end
 
-    def initialize(name: "agent_peers", config_dir: ENV["CLAUDE_CONFIG_DIR"] || File.expand_path("~/.claude"), sock_dir: SOCK_DIR)
+    def initialize(name: "peerpressure", config_dir: ENV["CLAUDE_CONFIG_DIR"] || File.expand_path("~/.claude"), sock_dir: SOCK_DIR)
       @name = name
       @sessions_dir = File.join(config_dir, "sessions")
       @sock_dir = sock_dir
@@ -63,7 +63,7 @@ module AgentPeers
     def write_record
       now = (Time.now.to_f * 1000).to_i
       rec = { pid: Process.pid, sessionId: @session_id, cwd: Dir.pwd, startedAt: now, procStart: proc_start,
-              peerProtocol: 1, pidDomain: "darwin", kind: "interactive", entrypoint: "agent_peers",
+              peerProtocol: 1, pidDomain: "darwin", kind: "interactive", entrypoint: "peerpressure",
               messagingSocketPath: @socket_path, name: @name, status: "idle", statusUpdatedAt: now, peerFeatures: [] }
       tmp = "#{record_path}.tmp"
       File.write(tmp, JSON.generate(rec), perm: 0o600)

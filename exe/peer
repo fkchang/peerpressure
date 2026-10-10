@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
-require "agent_peers"
+require "peerpressure"
 require "json"
 require "optparse"
 
@@ -8,7 +8,7 @@ json = false
 from = nil
 wait = 0
 parser = OptionParser.new do |o|
-  o.banner = "Usage: agent-peers list [--json] | send REF [TEXT] [--from LABEL] [--wait SECONDS]  (TEXT or stdin)"
+  o.banner = "Usage: peer list [--json] | send REF [TEXT] [--from LABEL] [--wait SECONDS]  (TEXT or stdin)"
   o.on("--json") { json = true }
   o.on("--from LABEL") { |v| from = v }
   o.on("--wait SECONDS", Float, "keep listening this long for replies") { |v| wait = v }
@@ -18,7 +18,7 @@ args = parser.parse(ARGV)
 begin
   case args.shift
   when "list"
-    peers = AgentPeers.list
+    peers = PeerPressure.list
     if json
       puts JSON.pretty_generate(peers.map(&:to_h_for_json))
     else
@@ -29,7 +29,7 @@ begin
     text = args.empty? ? $stdin.read : args.join(" ")
     opts = { wait: wait }
     opts[:from_label] = from if from
-    result = AgentPeers.send_message(ref, text, **opts)
+    result = PeerPressure.send_message(ref, text, **opts)
     d = result[:delivery]
     if json
       puts JSON.generate(result[:delivery].to_h_for_json.merge(replies: result[:messages].map(&:text)))
@@ -43,7 +43,7 @@ begin
   else
     abort parser.help
   end
-rescue AgentPeers::Error, ArgumentError => e
-  warn "agent-peers: #{e.message}"
+rescue PeerPressure::Error, ArgumentError => e
+  warn "peer: #{e.message}"
   exit 1
 end

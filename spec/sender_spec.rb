@@ -1,7 +1,7 @@
-RSpec.describe AgentPeers::Sender do
+RSpec.describe PeerPressure::Sender do
   include FakeFleet
 
-  let(:registry) { AgentPeers::Registry.new(config_dir: tmp, exclude_self: false) }
+  let(:registry) { PeerPressure::Registry.new(config_dir: tmp, exclude_self: false) }
 
   def read_frame(server)
     client = server.accept
@@ -26,10 +26,10 @@ RSpec.describe AgentPeers::Sender do
     expect(read_frame(server)["from"]).to eq("uds:/tmp/x.sock")
   end
 
-  it "AgentPeers.send_message resolves the ref then delivers" do
+  it "PeerPressure.send_message resolves the ref then delivers" do
     register(session_id: "abcd1234-0000", name: "target")
     server = servers.first
-    result = AgentPeers.send_message("abcd", "hi", registry: registry)
+    result = PeerPressure.send_message("abcd", "hi", registry: registry)
     frame = read_frame(server)
     expect(frame.dig("message", "content")).to include("hi")
     expect(result[:delivery].msg_id).to eq(frame["msg_id"])
@@ -52,8 +52,8 @@ RSpec.describe AgentPeers::Sender do
 
   it "rejects a frame over the line limit" do
     register(session_id: "abcd1234-0000", name: "target")
-    big = "x" * AgentPeers::Sender::MAX_LINE
-    expect { described_class.new.deliver(registry.find("target"), big) }.to raise_error(AgentPeers::Undeliverable, /too long/)
+    big = "x" * PeerPressure::Sender::MAX_LINE
+    expect { described_class.new.deliver(registry.find("target"), big) }.to raise_error(PeerPressure::Undeliverable, /too long/)
   end
 
   it "raises Undeliverable when the socket disappears" do
@@ -61,6 +61,6 @@ RSpec.describe AgentPeers::Sender do
     peer = registry.find("target")
     servers.each(&:close)
     File.delete(sock)
-    expect { described_class.new.deliver(peer, "hi") }.to raise_error(AgentPeers::Undeliverable)
+    expect { described_class.new.deliver(peer, "hi") }.to raise_error(PeerPressure::Undeliverable)
   end
 end

@@ -2,7 +2,7 @@ require "json"
 require "securerandom"
 require "socket"
 
-module AgentPeers
+module PeerPressure
   # Writes one "user" frame to a session's inbox socket. Ordinary acceptance sends no
   # receipt, so a successful return means the bytes reached the socket, not that the
   # session read them: a session in a stricter permission mode may hold the message
@@ -11,7 +11,7 @@ module AgentPeers
     MAX_LINE = 1_048_576 # characters per frame, per the bridge's protocol notes
     SETTLE = 0.3 # the macOS receiver can lose the last frame if the sender closes or deregisters at once
 
-    def initialize(from_label: "agent_peers", priority: "next", from: nil)
+    def initialize(from_label: "peerpressure", priority: "next", from: nil)
       @from_label = from_label
       @priority = priority
       @from = from

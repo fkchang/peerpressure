@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
-require "agent_peers"
+require "peerpressure"
 require "tmpdir"
 require "json"
 require "socket"
@@ -8,7 +8,7 @@ require "timeout"
 # A throwaway config dir plus real Unix sockets, so specs never touch live sessions.
 module FakeFleet
   def self.included(base)
-    base.let(:tmp) { Dir.mktmpdir("agent_peers") }
+    base.let(:tmp) { Dir.mktmpdir("peerpressure") }
     base.let(:sessions_dir) { FileUtils.mkdir_p(File.join(tmp, "sessions")).first }
     base.let(:servers) { [] }
     base.after { servers.each(&:close); FileUtils.rm_rf(tmp) }

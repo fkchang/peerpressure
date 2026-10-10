@@ -1,12 +1,12 @@
 * Project Identity
 :PROPERTIES:
 :UREGISTRY_SCHEMA_VERSION: 1
-:ID: tool:agent_peers
+:ID: tool:peerpressure
 :KIND: tool
 :SCOPE: project
 :END:
 
-List and message live Claude Code and Codex sessions on this machine, from Ruby or the shell.
+Message other AI agents on your machine. List and message live Claude Code and Codex sessions from Ruby or the shell, with delivery status and replies.
 
 * Purpose
 

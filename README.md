@@ -1,62 +1,106 @@
-# agent_peers
+# peerpressure
 
-List and message live Claude Code and Codex sessions on this machine, from Ruby or the shell.
+[![Ruby 3.2+](https://img.shields.io/badge/ruby-3.2%2B-CC342D.svg)](https://www.ruby-lang.org/)
+[![MIT](https://img.shields.io/badge/license-MIT-2d3142.svg)](LICENSE)
+[![Protocol: unofficial](https://img.shields.io/badge/protocol-unofficial-orange.svg)](#caveats-read-these-first)
 
-```ruby
-require "agent_peers"
+![Lonely agents in silent terminals, then one offers a rolled-up note: Just one message.](assets/hero.jpg)
 
-AgentPeers.list.each { |p| puts [p.kind, p.status, p.name, p.session_id].join(" ") }
+**Twenty agents. Zero conversations.**
 
-# One-shot: registers this process for the send, listens `wait` seconds, deregisters.
-r = AgentPeers.send_message("scrum master oct 8 2026", "status check, please", from_label: "canvas", wait: 10)
-r[:delivery].status   # => :unconfirmed | :held | :denied | :expired | :dropped | :refused | :delivered
-r[:messages]          # replies that arrived within the wait
+Your Claude Code sessions are sitting in separate terminals, ignoring each other, and you are the message bus. peerpressure lets them (and Codex) talk, from Ruby or the shell.
 
-# Long-lived (canvas server, worker): stays registered so replies can arrive any time.
-session = AgentPeers::Session.new(name: "streamweaver-canvas").start
-id = session.send_message("scrum master oct 8 2026", "status check?")
-session.delivery(id).status                         # held? denied? or :unconfirmed
-session.on_message { |m| puts "#{m.from_name}: #{m.text}" }
-session.reply(msg, "thanks")                        # answers a received Message
-session.notify_when_idle("scrum master oct 8 2026") # one :idle Message when it next goes idle
-```
+> *"Just one message. Nobody will know."*
+
+## 30 seconds
 
 ```bash
-agent-peers list [--json]
-agent-peers send REF "text" [--from LABEL] [--wait SECONDS]   # or pipe text on stdin
-#   prints the delivery status; exit 2 when denied/expired/dropped/refused
+gem install peerpressure            # not on RubyGems yet: gem "peerpressure", github: "fkchang/peerpressure"
+
+peer list                            # every live Claude Code and Codex session on this machine
+peer send "scrum master" "status check, please"
+peer send codex-myproject-3 "can you look at the failing spec?" --wait 30
 ```
 
-`REF` is a full sessionId, a unique sessionId prefix (4+ chars), a pid, or an exact name. Names repeat
-across sessions, so an ambiguous ref raises `AgentPeers::Ambiguous` instead of guessing.
+```
+codex  idle  codex-genx-e9      01a11ad5  ~/work/genX
+claude busy  oct 2 didx deploy  36216650  ~/rails/thebarpages_rails
+claude idle  scrum master       7cb995ae  ~/work/cultiv-ai
+```
+
+An **idle** session wakes up, reads the message, and does the thing. Nobody polls, nothing blocks.
+
+## From Ruby
+
+```ruby
+require "peerpressure"
+
+PeerPressure.list.each { |p| puts "#{p.kind} #{p.status} #{p.name}" }
+
+# One-shot: registers this process for the send, listens a few seconds, cleans up.
+r = PeerPressure.send_message("scrum master", "status check?", from_label: "canvas", wait: 10)
+r[:delivery].status   # :unconfirmed, :held, :denied, :expired, :dropped, :refused, :delivered
+r[:messages]          # whatever came back within 10 seconds
+
+# Long-lived: stays on the line so replies can arrive whenever.
+session = PeerPressure::Session.new(name: "my-dashboard").start
+id = session.send_message("scrum master", "any blockers?")
+session.on_message { |m| puts "#{m.from_name}: #{m.text}" }
+session.reply(msg, "thanks")                    # answer whoever wrote to you
+session.notify_when_idle("scrum master")        # one :idle message when it next finishes
+```
+
+`ref` can be a sessionId, a unique prefix of one (4+ characters), a pid, or an exact name. Names repeat across sessions, so an ambiguous ref raises instead of guessing.
+
+## What is it for
+
+- **A form that talks back.** A dashboard form submit becomes a message to the session that opened it. No blocked terminal, no wait command that times out.
+- **Claude and Codex in one conversation.** Same registry, same call.
+- **A scrum-master session** that other tools can ask for status, and that can ask them back.
+- **Idle notices**: "tell me when that session is done" without polling.
+
+## "Delivered" is not a thing, honestly
+
+Ordinary acceptance sends no receipt, so the gem refuses to lie to you.
+
+| Status | Meaning |
+|---|---|
+| `:unconfirmed` | Bytes written. Nothing objected. Not proof anyone read it. |
+| `:held` | The receiving session is waiting for its user to approve. |
+| `:delivered` | A held message was released. |
+| `:denied` / `:expired` | The receiver's user said no, or ran out the clock. |
+| `:dropped` / `:refused` | A guard rejected it (rate limit, attachments, loop detection). |
+
+`peer send` exits 2 on `denied`, `expired`, `dropped` or `refused`.
+
+## Codex
+
+Codex tasks appear in the same list once the [claude-uds-bridge](https://github.com/LeonKohli/claude-uds-bridge) plugin is installed and its hooks are trusted. A task registers when its first turn runs, so an untouched chat is invisible.
+
+The plugin compares permission modes. A Codex task running with approvals off and full access (`bypass`) holds messages from senders that declare no mode, and asks its user to approve them. A task that asks before risky actions accepts them directly. peerpressure never declares a mode on your behalf, because faking one defeats the guard.
 
 ## How it works
 
-Claude Code writes one record per live session to `~/.claude/sessions/<pid>.json` (override with
-`CLAUDE_CONFIG_DIR`) and listens on a Unix socket named in the record's `messagingSocketPath`. Codex
-tasks join the same registry when the [claude-uds-bridge](https://github.com/LeonKohli/claude-uds-bridge)
-plugin is installed and trusted (`entrypoint: "codex-claude-uds-bridge"`, reported as `kind: :codex`).
-Sending is one newline-terminated JSON `user` frame written to that socket. No auth is needed for a
-same-user write.
+Claude Code keeps one JSON record per live session in `~/.claude/sessions/<pid>.json` and an inbox Unix socket per session. Codex tasks join the same registry through the plugin. peerpressure reads the registry, checks the pid is alive and the socket exists, and writes one newline-terminated JSON `user` frame to the socket.
 
-## Delivery status
+Codex drops frames from senders that are not themselves registered peers, so `send_message` registers the calling process (a row plus a private socket) for the duration of the send and removes both afterward. A `Session` stays registered so replies have somewhere to land.
 
-Ordinary acceptance sends no receipt, so `:unconfirmed` means "bytes written, nothing said against
-it", never "delivered". A receiver in a different permission mode HOLDS the message for its user
-(`:held`), then it ends `:delivered`, `:denied` or `:expired`. The Codex bridge compares modes: a
-`bypass` Codex task holds messages from a sender that declares none. See the Codex notes below.
+## Caveats (read these first)
 
-## Caveats
-- The wire format is a Claude Code internal with no compatibility promise. `Sender#build` is the only
-  place that knows it, and `spec/sender_spec.rb` pins the shape. Verified on Claude Code 2.1.296.
-- A successful send means the bytes reached the socket, not that the session read them. Ordinary
-  acceptance sends no receipt. A session in a stricter permission mode may hold the message for its user.
-- **Senders must be registered.** The Codex bridge silently drops any frame whose `from` is not a live, registered peer's socket (Claude sessions do not check). `send_message` therefore registers this process (a `sessions/<pid>.json` row plus a private socket in `/tmp/cc-socks`) for the duration of the send, then removes both. Replies and delivery receipts arrive on that socket: pass `wait: SECONDS` (`--wait`) to collect them. A process that wants replies after the call returns should hold a `Registration` open.
-- Codex tasks in `prompting` mode accept messages from this gem directly. `bypass`-mode tasks (approval `never` plus full access, common on the desktop app) hold them, and the approval dialog may not render there. The gem never declares a `from-mode`, because faking one defeats the guard.
-- A Codex task is invisible until its first turn runs (the plugin registers on `SessionStart`).
-- Liveness is `kill -0` on the pid plus a socket file check. A reused pid could in theory pass.
-- The calling session is hidden from `list` when `CLAUDE_CODE_SESSION_ID` is set (`exclude_self: false` to keep it).
+- **The protocol is unofficial.** The wire format is a Claude Code internal with no compatibility promise. It works on Claude Code 2.1.296. `Sender#build` is the only code that knows the format, and the specs pin it, so an upgrade that breaks it fails loudly in one place.
+- **Messages are prompts.** Any process running as your user can message any session, and the receiving agent treats a peer message as a teammate's request. That is a prompt-injection channel. Never forward untrusted text into a peer message, and never put secrets in one.
+- **Same machine, same user.** Unix sockets, no network, no auth.
+- **While a send or a `Session` is active, your process shows up in every other session's agent list.** It is removed when it stops.
+- **A `/clear` changes a session's id and keeps its pid.** A stale id raises `NotFound` instead of vanishing into the void.
 
 ## Tests
 
-`bundle exec rspec`. Specs build a throwaway config dir and real Unix sockets; they never touch live sessions.
+```bash
+bundle exec rspec
+```
+
+The specs build a throwaway config directory and real Unix sockets. They never touch your live sessions.
+
+## License
+
+MIT

@@ -1,6 +1,6 @@
 require "fileutils"
 
-RSpec.describe AgentPeers::Registry do
+RSpec.describe PeerPressure::Registry do
   include FakeFleet
 
   let(:registry) { described_class.new(config_dir: tmp, exclude_self: false) }
@@ -42,11 +42,11 @@ RSpec.describe AgentPeers::Registry do
     it("by unique prefix") { expect(registry.find("abcd").name).to eq("scrum master") }
     it("by exact name") { expect(registry.find("scrum master").session_id).to eq("abcd1234-0000") }
     it("by pid") { expect(registry.find(Process.pid.to_s).name).to eq("scrum master") }
-    it("raises NotFound") { expect { registry.find("nope") }.to raise_error(AgentPeers::NotFound) }
+    it("raises NotFound") { expect { registry.find("nope") }.to raise_error(PeerPressure::NotFound) }
 
     it "raises Ambiguous when a name matches two sessions" do
       register(session_id: "abcd9999-0000", name: "scrum master", pid: Process.ppid)
-      expect { registry.find("scrum master") }.to raise_error(AgentPeers::Ambiguous, /sessionId/)
+      expect { registry.find("scrum master") }.to raise_error(PeerPressure::Ambiguous, /sessionId/)
     end
   end
 end

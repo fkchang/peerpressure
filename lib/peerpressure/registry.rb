@@ -1,7 +1,7 @@
 require "json"
 require "time"
 
-module AgentPeers
+module PeerPressure
   # Reads the session registry. A record counts as live when its pid still runs and
   # its socket file exists; a stale file can outlive its process.
   class Registry

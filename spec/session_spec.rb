@@ -1,7 +1,7 @@
 require "fileutils"
 require "timeout"
 
-RSpec.describe AgentPeers::Session do
+RSpec.describe PeerPressure::Session do
   include FakeFleet
 
   let(:sock_dir) { File.join(tmp, "socks").tap { |d| FileUtils.mkdir_p(d, mode: 0o700) } }
@@ -21,7 +21,7 @@ RSpec.describe AgentPeers::Session do
   before { session.start }
 
   it "stays registered and is visible to other peers" do
-    names = AgentPeers::Registry.new(config_dir: tmp, exclude_self: false).peers.map(&:name)
+    names = PeerPressure::Registry.new(config_dir: tmp, exclude_self: false).peers.map(&:name)
     expect(names).to include("canvas")
   end
 

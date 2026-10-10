@@ -1,9 +1,9 @@
-module AgentPeers
+module PeerPressure
   # A long-lived peer: stays registered so other agents can reply to it, and keeps what arrives.
   # Use one per process (a canvas server, a worker). Replies show up through #on_message, #inbox
   # or #wait_for; delivery receipts through #receipts_for.
   #
-  #   session = AgentPeers::Session.new(name: "streamweaver-canvas").start
+  #   session = PeerPressure::Session.new(name: "streamweaver-canvas").start
   #   id = session.send_message("scrum master oct 8 2026", "status check?")
   #   reply = session.wait_for(from_session: session.find("scrum master oct 8 2026").session_id, timeout: 60)
   class Session

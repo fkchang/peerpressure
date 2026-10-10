@@ -1,13 +1,13 @@
-require_relative "lib/agent_peers/version"
+require_relative "lib/peerpressure/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "agent_peers"
-  spec.version = AgentPeers::VERSION
+  spec.name = "peerpressure"
+  spec.version = PeerPressure::VERSION
   spec.authors = ["Forrest Chang"]
   spec.summary = "List and message live Claude Code and Codex sessions from Ruby"
   spec.files = Dir.glob("lib/**/*") + Dir.glob("exe/**/*") + ["README.md"]
   spec.bindir = "exe"
-  spec.executables = ["agent-peers"]
+  spec.executables = ["peer"]
   spec.required_ruby_version = ">= 3.2"
 
   # json lazily loads ostruct; declaring it silences the Ruby 3.5 deprecation warning.
