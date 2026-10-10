@@ -1,5 +1,6 @@
 # peerpressure
 
+[![Gem Version](https://img.shields.io/gem/v/peerpressure.svg)](https://rubygems.org/gems/peerpressure)
 [![Ruby 3.2+](https://img.shields.io/badge/ruby-3.2%2B-CC342D.svg)](https://www.ruby-lang.org/)
 [![MIT](https://img.shields.io/badge/license-MIT-2d3142.svg)](LICENSE)
 [![Protocol: unofficial](https://img.shields.io/badge/protocol-unofficial-orange.svg)](#caveats-read-these-first)
