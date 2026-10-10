@@ -9,6 +9,7 @@ from = nil
 wait = 0
 to = nil
 foreground = false
+via = "relay"
 submit = /./
 parser = OptionParser.new do |o|
   o.banner = <<~BANNER
@@ -17,13 +18,15 @@ parser = OptionParser.new do |o|
       peer send REF [TEXT] [--from LABEL] [--wait SECONDS]          (TEXT or stdin)
       peer canvas-relay CANVAS [--to REF] [--submit REGEX]          start (idempotent) a relay: form submits become messages
       peer canvas-relay stop CANVAS | list
-      peer demo [CANVAS] [--to REF]                                 push a demo form pinned to this session
+      peer demo [CANVAS] [--to REF] [--via relay|reply-to]          push a demo form pinned to this session
+      peer reply-to [--to REF]                                      print the value for `streamweaver canvas-push --reply-to`
   BANNER
   o.on("--json") { json = true }
   o.on("--from LABEL") { |v| from = v }
   o.on("--wait SECONDS", Float, "keep listening this long for replies") { |v| wait = v }
   o.on("--to REF", "target session (default: the session this runs inside)") { |v| to = v }
   o.on("--foreground", "run the relay in this process (default: detached)") { foreground = true }
+  o.on("--via MODE", %w[relay reply-to], "demo delivery: a relay process (default) or the bridge's reply_to") { |v| via = v }
   o.on("--submit REGEX", "only buttons whose id matches forward their answer") { |v| submit = Regexp.new(v) }
 end
 args = parser.parse(ARGV)
@@ -86,7 +89,9 @@ begin
     end
   when "demo"
     require "peerpressure/canvas"
-    PeerPressure::Canvas::Demo.run(canvas: args.shift || "peerpressure-demo", target: pinned_target(to))
+    PeerPressure::Canvas::Demo.run(canvas: args.shift || "peerpressure-demo", target: pinned_target(to), via: via.tr("-", "_").to_sym)
+  when "reply-to"
+    puts pinned_target(to).to_reply_to
   else
     abort parser.help
   end

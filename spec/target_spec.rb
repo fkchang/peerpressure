@@ -49,6 +49,24 @@ RSpec.describe PeerPressure::Target do
     end
   end
 
+  describe ".parse and #to_reply_to" do
+    it "round-trips the JSON payload of a reply_to value" do
+      t = described_class.new(session_id: id1, pid: 5, proc_start: "x", name: "n")
+      payload = t.to_reply_to.delete_prefix("peerpressure:")
+      expect(described_class.parse(payload, registry: registry)).to eq(t)
+    end
+
+    it "resolves a bare ref through the registry" do
+      register(session_id: id1, name: "scrum", pid: Process.ppid)
+      expect(described_class.parse("scrum", registry: registry).session_id).to eq(id1)
+    end
+
+    it "explains an empty or malformed payload" do
+      expect { described_class.parse("  ", registry: registry) }.to raise_error(PeerPressure::Error, /no target/)
+      expect { described_class.parse("{nope", registry: registry) }.to raise_error(PeerPressure::Error, /not valid JSON/)
+    end
+  end
+
   it "round-trips through a hash" do
     t = described_class.new(session_id: id1, pid: 5, proc_start: "x", name: "n")
     expect(described_class.from_h(t.to_h.transform_keys(&:to_s))).to eq(t)

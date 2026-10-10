@@ -16,6 +16,7 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
   spec.metadata["rubygems_mfa_required"] = "true"
+  spec.metadata["stream_weaver.extensions.v1"] = "peerpressure/stream_weaver"
 
   spec.files = Dir["lib/**/*.rb", "exe/*", "README.md", "CHANGELOG.md", "LICENSE", "docs/for_llms.md"]
   spec.bindir = "exe"

@@ -76,6 +76,22 @@ peer canvas-relay stop my-canvas
 - **Every button is a submit** unless you pass `--submit REGEX`. A button whose id contains `resend` re-sends the last answer.
 - It needs the [stream_weaver](https://github.com/fkchang/stream_weaver) gem. `peerpressure` itself does not depend on it. One relay runs per canvas, logging to `~/.peerpressure/relays/<canvas>.log`.
 
+### No relay process: `reply_to`
+
+StreamWeaver can hold the recipient itself. A canvas session carries `reply_to`, and the canvas bridge hands each browser event to an extension. peerpressure registers one (through StreamWeaver's extension discovery, via the gem's metadata), so a form pinned to a session needs nothing running beside the bridge and cannot time out.
+
+```bash
+gem install peerpressure             # then restart the bridge once: streamweaver canvas-restart
+streamweaver canvas-push decision --reply-to "$(peer reply-to)" <<'RUBY'
+  radio_group :choice, ["A", "B"]
+  button "Send"
+RUBY
+# end your turn; the answer arrives as a message
+peer demo --via reply-to             # the same thing as a ready-made demo
+```
+
+`peer reply-to` prints `peerpressure:` plus the pinned target (session id and process), so it survives a `/clear`. The status page, Resend button and "session gone" handling are the same as the relay's. **This needs a StreamWeaver with `reply_to`, which is on its `canvas-reply-to` branch and not yet released.** Until then, use the relay above, which works with any StreamWeaver.
+
 ## "Delivered" is not a thing, honestly
 
 Ordinary acceptance sends no receipt, so the gem refuses to lie to you.

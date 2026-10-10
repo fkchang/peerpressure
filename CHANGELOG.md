@@ -4,6 +4,7 @@
 
 - Canvas relay: `peer canvas-relay CANVAS` forwards StreamWeaver form submits to a pinned session as messages, re-pushes a delivery-status page with the answer kept and a Resend button, reconnects when the bridge restarts, and is idempotent per canvas.
 - `peer demo`: pushes a demo form pinned to the calling session and starts its relay.
+- StreamWeaver `reply_to` support: the gem registers a `canvas_event_sink` through StreamWeaver's extension discovery (gemspec metadata `stream_weaver.extensions.v1`), so a canvas pinned with `--reply-to "$(peer reply-to)"` delivers submits from inside the bridge, with no relay process. `peer reply-to` prints the value; `peer demo --via reply-to` demonstrates it. Needs a StreamWeaver that has `reply_to` (not yet released).
 - `PeerPressure::Target`: pins a session by id and by process (pid plus start time), so a pinned form survives `/clear`. `Registry#resolve`, `Peer#proc_start`.
 
 ## 0.1.0

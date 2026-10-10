@@ -29,6 +29,16 @@ Ruby gem + CLI (`exe/peer`) to discover and message live Claude Code and Codex s
 - After pushing a form, the agent should END ITS TURN. Do not poll the canvas or block on `canvas-wait`.
 - Specs: `spec/canvas/*` use a fake client and fake session plus real sockets in a tmpdir.
 
+## reply_to sink (no relay process; needs a StreamWeaver with reply_to)
+
+`streamweaver canvas-push NAME --reply-to "$(peer reply-to)"` (or `peer demo --via reply-to`). `peer reply-to [--to REF]` prints `peerpressure:<target JSON>`; the payload may also be a bare session id or name.
+
+- `canvas/sink.rb` is the `canvas_event_sink` StreamWeaver's bridge calls (on its own thread per event). It keeps one `Relay` per (canvas, payload) behind a lock, so Resend keeps its last answer, and reuses `Relay#handle` and `StatusView`; `ContextClient` turns the relay's `push` into the bridge's `ctx.push`. One shared `Session` ("streamweaver-canvas") is created lazily for the whole bridge process.
+- `stream_weaver.rb` is the loader advertised in the gemspec (`stream_weaver.extensions.v1`); the bridge discovers extensions ONLY at boot, so install the gem, then restart the bridge.
+- The bridge's own env may carry `CLAUDE_CODE_SESSION_ID` of whichever agent started it, so the sink's registry is `exclude_self: false`.
+- An unresolvable target is explained on the canvas (status page), not raised, and retried on the next press.
+- Ordering is not guaranteed by StreamWeaver (thread per event); the sink serializes per canvas for itself.
+
 ## Gotchas
 
 - Wire format is internal to Claude Code; if sends stop arriving after an upgrade, fix `Sender#build` and the spec together.

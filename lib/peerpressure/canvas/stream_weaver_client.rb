@@ -19,15 +19,23 @@ module PeerPressure
         raise Unavailable, e.message
       end
 
-      def push(name, dsl)
-        @client.send_message(@messages.push(name, dsl, source_dir: nil))
+      # reply_to: "peerpressure:<target>" makes the bridge itself deliver this canvas's submits (no relay
+      # process). Only sent when given, so an older StreamWeaver without reply_to still works for the rest.
+      def push(name, dsl, reply_to: nil)
+        extra = reply_to ? { reply_to: reply_to } : {}
+        @client.send_message(@messages.push(name, dsl, source_dir: nil, **extra))
+      rescue ArgumentError
+        raise Unavailable, "this StreamWeaver does not support reply_to; upgrade the stream_weaver gem"
       rescue @client::NotRunningError, @client::ConnectionError => e
         raise Unavailable, e.message
       end
 
-      def ensure_canvas(name)
+      def ensure_canvas(name, reply_to: nil)
+        extra = reply_to ? { reply_to: reply_to } : {}
         @client.ensure_bridge_running
-        @client.send_message(@messages.create(name, layout: :fluid))
+        @client.send_message(@messages.create(name, layout: :fluid, **extra))
+      rescue ArgumentError
+        raise Unavailable, "this StreamWeaver does not support reply_to; upgrade the stream_weaver gem"
       rescue @client::NotRunningError, @client::ConnectionError => e
         raise Unavailable, e.message
       end
