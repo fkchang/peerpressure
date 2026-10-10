@@ -15,7 +15,7 @@ Your Claude Code sessions are sitting in separate terminals, ignoring each other
 ## 30 seconds
 
 ```bash
-gem install peerpressure            # not on RubyGems yet: gem "peerpressure", github: "fkchang/peerpressure"
+gem install peerpressure
 
 peer list                            # every live Claude Code and Codex session on this machine
 peer send "scrum master" "status check, please"
@@ -54,7 +54,7 @@ session.notify_when_idle("scrum master")        # one :idle message when it next
 
 ## What is it for
 
-- **A form that talks back.** A dashboard form submit becomes a message to the session that opened it. No blocked terminal, no wait command that times out.
+- **A form that talks back** (the reason this exists). A dashboard form submit becomes a message to the session that opened it, with no blocked terminal and no wait command that times out. The send and reply half is here; the StreamWeaver canvas relay that wires a form to it is the next piece.
 - **Claude and Codex in one conversation.** Same registry, same call.
 - **A scrum-master session** that other tools can ask for status, and that can ask them back.
 - **Idle notices**: "tell me when that session is done" without polling.
