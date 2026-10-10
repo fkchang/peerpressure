@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "agent_peers"
+require "json"
+require "optparse"
+
+json = false
+from = nil
+wait = 0
+parser = OptionParser.new do |o|
+  o.banner = "Usage: agent-peers list [--json] | send REF [TEXT] [--from LABEL] [--wait SECONDS]  (TEXT or stdin)"
+  o.on("--json") { json = true }
+  o.on("--from LABEL") { |v| from = v }
+  o.on("--wait SECONDS", Float, "keep listening this long for replies") { |v| wait = v }
+end
+args = parser.parse(ARGV)
+
+begin
+  case args.shift
+  when "list"
+    peers = AgentPeers.list
+    if json
+      puts JSON.pretty_generate(peers.map(&:to_h_for_json))
+    else
+      peers.each { |p| puts format("%-6s %-5s %-40s %s  %s", p.kind, p.status, p.name, p.session_id[0, 8], p.cwd) }
+    end
+  when "send"
+    ref = args.shift or abort(parser.help)
+    text = args.empty? ? $stdin.read : args.join(" ")
+    opts = { wait: wait }
+    opts[:from_label] = from if from
+    result = AgentPeers.send_message(ref, text, **opts)
+    d = result[:delivery]
+    if json
+      puts JSON.generate(result[:delivery].to_h_for_json.merge(replies: result[:messages].map(&:text)))
+    else
+      puts "sent #{d.msg_id}: #{d.status}#{" (#{d.detail})" if d.detail}"
+      puts "  (no receipt: bytes written; not proof the session read it)" if d.status == :unconfirmed
+      puts "  held: the receiving session is waiting for its user to approve" if d.held?
+      result[:messages].each { |m| puts "reply from #{m.from_name}: #{m.text}" }
+    end
+    exit 2 if d.failed?
+  else
+    abort parser.help
+  end
+rescue AgentPeers::Error, ArgumentError => e
+  warn "agent-peers: #{e.message}"
+  exit 1
+end

@@ -1,0 +1,34 @@
+* Project Identity
+:PROPERTIES:
+:UREGISTRY_SCHEMA_VERSION: 1
+:ID: tool:agent_peers
+:KIND: tool
+:SCOPE: project
+:END:
+
+List and message live Claude Code and Codex sessions on this machine, from Ruby or the shell.
+
+* Purpose
+
+* Default Usage Guidance
+
+* Key Capabilities
+
+* Important Components
+
+* Inputs and Outputs
+** Inputs
+** Outputs
+** Streams / Artifacts
+
+* Conventions
+** Preferred Tools
+** Preferred Formats
+** Logging / Monitoring
+** Storage
+
+* Important Paths
+
+* How To Query This Project
+
+* Relationships
