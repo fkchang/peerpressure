@@ -15,14 +15,14 @@ module FakeFleet
   end
 
   # Registers a fake session whose pid is this test process (so it counts as alive).
-  def register(session_id:, name:, entrypoint: "cli", pid: Process.pid, started_at: 1_791_000_000_000, with_socket: true)
+  def register(session_id:, name:, entrypoint: "cli", pid: Process.pid, started_at: 1_791_000_000_000, with_socket: true, proc_start: "Fri Oct  9 23:18:03 2026")
     sock = File.join(tmp, "#{pid}-#{session_id[0, 4]}.sock")
     if with_socket
       servers << UNIXServer.new(sock)
     end
     File.write(File.join(sessions_dir, "#{pid}.json"), JSON.generate(
       pid: pid, sessionId: session_id, name: name, cwd: "/x", entrypoint: entrypoint,
-      status: "idle", startedAt: started_at, messagingSocketPath: sock
+      status: "idle", startedAt: started_at, procStart: proc_start, messagingSocketPath: sock
     ))
     sock
   end

@@ -31,6 +31,15 @@ module PeerPressure
       hits.first
     end
 
+    # A pinned Target back to its live Peer. A /clear gives a Claude process a new sessionId
+    # but keeps its pid and start time, so fall back to process identity.
+    def resolve(target)
+      all = peers
+      hit = all.find { |p| p.session_id == target.session_id }
+      hit ||= all.find { |p| p.pid == target.pid && p.proc_start == target.proc_start } if target.pid && target.proc_start
+      hit or raise NotFound, "#{target.name || target.session_id} is no longer running (pid #{target.pid})"
+    end
+
     private
 
     def load_peer(file)

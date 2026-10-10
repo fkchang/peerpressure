@@ -19,6 +19,16 @@ Ruby gem + CLI (`exe/peer`) to discover and message live Claude Code and Codex s
 - `lib/peerpressure/session.rb`, `message.rb`, `delivery.rb`: long-lived wrapper, parsed inbound frames (message / receipt / idle, envelope unwrapped), and the status fold.
 - `lib/peerpressure/peer.rb`: `kind` is `:codex` iff `entrypoint == "codex-claude-uds-bridge"`.
 
+## Canvas relay (`require "peerpressure/canvas"`, needs the stream_weaver gem)
+
+`peer canvas-relay CANVAS [--to REF] [--submit REGEX]` (idempotent, detached; `--foreground` to debug), `peer canvas-relay stop CANVAS | list`, `peer demo [CANVAS] [--to REF]`. Default target is the session the command runs inside (`CLAUDE_CODE_SESSION_ID`).
+
+- Why a relay: the canvas bridge forwards click events only to connected clients and drops them otherwise, and canvas DSL is not run server-side with `submit` blocks. The relay is the standing listener (`Client.each_event`), so forms never time out.
+- Files: `canvas/relay.rb` (event loop, forwarding, reconnect), `canvas/status_view.rb` (page after a submit; every dynamic string via `#inspect`, values HTML-escaped), `canvas/formatter.rb` (message text), `canvas/lifecycle.rb` (pidfile at `~/.peerpressure/relays/<canvas>.json`, `ensure_running`), `canvas/stream_weaver_client.rb` (the only file that touches StreamWeaver), `canvas/demo.rb`, `target.rb` (pin by session id AND pid + proc_start).
+- The `action` event's `state` carries the whole form; the relay drops the Save-as-doc widget's `scope`/`name` keys.
+- After pushing a form, the agent should END ITS TURN. Do not poll the canvas or block on `canvas-wait`.
+- Specs: `spec/canvas/*` use a fake client and fake session plus real sockets in a tmpdir.
+
 ## Gotchas
 
 - Wire format is internal to Claude Code; if sends stop arriving after an upgrade, fix `Sender#build` and the spec together.

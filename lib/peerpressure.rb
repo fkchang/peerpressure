@@ -1,6 +1,7 @@
 require_relative "peerpressure/version"
 require_relative "peerpressure/peer"
 require_relative "peerpressure/registry"
+require_relative "peerpressure/target"
 require_relative "peerpressure/registration"
 require_relative "peerpressure/message"
 require_relative "peerpressure/delivery"

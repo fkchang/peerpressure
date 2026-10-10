@@ -7,13 +7,30 @@ require "optparse"
 json = false
 from = nil
 wait = 0
+to = nil
+foreground = false
+submit = /./
 parser = OptionParser.new do |o|
-  o.banner = "Usage: peer list [--json] | send REF [TEXT] [--from LABEL] [--wait SECONDS]  (TEXT or stdin)"
+  o.banner = <<~BANNER
+    Usage:
+      peer list [--json]
+      peer send REF [TEXT] [--from LABEL] [--wait SECONDS]          (TEXT or stdin)
+      peer canvas-relay CANVAS [--to REF] [--submit REGEX]          start (idempotent) a relay: form submits become messages
+      peer canvas-relay stop CANVAS | list
+      peer demo [CANVAS] [--to REF]                                 push a demo form pinned to this session
+  BANNER
   o.on("--json") { json = true }
   o.on("--from LABEL") { |v| from = v }
   o.on("--wait SECONDS", Float, "keep listening this long for replies") { |v| wait = v }
+  o.on("--to REF", "target session (default: the session this runs inside)") { |v| to = v }
+  o.on("--foreground", "run the relay in this process (default: detached)") { foreground = true }
+  o.on("--submit REGEX", "only buttons whose id matches forward their answer") { |v| submit = Regexp.new(v) }
 end
 args = parser.parse(ARGV)
+
+def pinned_target(to)
+  to ? PeerPressure::Target.from_peer(PeerPressure.find(to, exclude_self: false)) : PeerPressure::Target.current
+end
 
 begin
   case args.shift
@@ -40,6 +57,36 @@ begin
       result[:messages].each { |m| puts "reply from #{m.from_name}: #{m.text}" }
     end
     exit 2 if d.failed?
+  when "canvas-relay"
+    require "peerpressure/canvas"
+    lifecycle = PeerPressure::Canvas::Lifecycle.new
+    case args.first
+    when "stop"
+      args.shift
+      canvas = args.shift or abort(parser.help)
+      puts(lifecycle.stop(canvas) ? "stopped relay for #{canvas}" : "no relay for #{canvas}")
+    when "list"
+      lifecycle.list.each { |r| puts "#{r['canvas']}  pid #{r['pid']}  -> #{r.dig('target', 'name')}" }
+    else
+      canvas = args.shift or abort(parser.help)
+      target = pinned_target(to)
+      if foreground
+        session = PeerPressure::Session.new(name: "canvas-relay:#{canvas}").start
+        relay = PeerPressure::Canvas::Relay.new(canvas: canvas, target: target, client: PeerPressure::Canvas::StreamWeaverClient.new,
+                                                session: session, submit: submit)
+        lifecycle.write(canvas, target: target)
+        at_exit { lifecycle.remove(canvas) }
+        trap("TERM") { exit }
+        trap("INT") { exit }
+        relay.run
+      else
+        state, pid = lifecycle.ensure_running(canvas, target)
+        puts "relay #{state} for #{canvas} (pid #{pid}), forwarding to #{target.name}"
+      end
+    end
+  when "demo"
+    require "peerpressure/canvas"
+    PeerPressure::Canvas::Demo.run(canvas: args.shift || "peerpressure-demo", target: pinned_target(to))
   else
     abort parser.help
   end

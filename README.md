@@ -55,10 +55,26 @@ session.notify_when_idle("scrum master")        # one :idle message when it next
 
 ## What is it for
 
-- **A form that talks back** (the reason this exists). A dashboard form submit becomes a message to the session that opened it, with no blocked terminal and no wait command that times out. The send and reply half is here; the StreamWeaver canvas relay that wires a form to it is the next piece.
+- **A form that talks back** (the reason this exists). A StreamWeaver canvas form submit becomes a message to the session that opened it, with no blocked terminal and no wait command that times out. See below.
 - **Claude and Codex in one conversation.** Same registry, same call.
 - **A scrum-master session** that other tools can ask for status, and that can ask them back.
 - **Idle notices**: "tell me when that session is done" without polling.
+
+## Canvas forms that message you back
+
+A blocking `canvas-wait` ties up your agent and eventually times out. A relay does not: it holds the canvas event connection open (the bridge drops events when nobody is listening) and turns each submit into a message to one pinned session. The agent ends its turn and carries on; the answer arrives whenever the person gets to it.
+
+```bash
+peer demo                       # from inside a Claude Code session: pushes a form, starts the relay, done
+peer canvas-relay my-canvas     # for your own form: start (idempotent) a relay pinned to this session
+peer canvas-relay list
+peer canvas-relay stop my-canvas
+```
+
+- **Pinned, not "current".** The relay pins the session by id and by process, so it survives a `/clear` and refuses a recycled pid.
+- **The page tells the truth.** After a submit the canvas shows what happened: sent, held, denied, or session gone. The answer stays on the page with a **Resend** button, so a press that did not land never looks like one that did.
+- **Every button is a submit** unless you pass `--submit REGEX`. A button whose id contains `resend` re-sends the last answer.
+- It needs the [stream_weaver](https://github.com/fkchang/stream_weaver) gem. `peerpressure` itself does not depend on it. One relay runs per canvas, logging to `~/.peerpressure/relays/<canvas>.log`.
 
 ## "Delivered" is not a thing, honestly
 
