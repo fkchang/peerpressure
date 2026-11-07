@@ -7,6 +7,9 @@ require_relative "peerpressure/message"
 require_relative "peerpressure/delivery"
 require_relative "peerpressure/sender"
 require_relative "peerpressure/session"
+require_relative "peerpressure/cli_transport"
+require_relative "peerpressure/hc"
+require_relative "peerpressure/herdr"
 
 # List and message live Claude Code and Codex sessions on this machine.
 #
@@ -24,11 +27,19 @@ module PeerPressure
 
   def self.find(ref, **opts) = Registry.new(**opts).find(ref)
 
+  # Transports tried, in order, when a ref is not a Claude Code or Codex-bridge session:
+  # herdr-core terminals (the desktop app), then plain herdr agents. Each is [registry, sender class].
+  def self.fallbacks = [[Hc::Registry.new, Hc::Sender], [Herdr::Registry.new, Herdr::Sender]]
+
   # Registers this process as a peer for the duration of the send (the Codex bridge drops frames
   # from unregistered senders) and listens `wait` seconds (at least Sender::SETTLE). Returns a
   # Delivery (status :unconfirmed / :held / :denied / ...) plus any replies as `messages`.
-  def self.send_message(ref, text, registry: Registry.new, from_label: "peerpressure", wait: 0, **opts)
-    peer = registry.find(ref)
+  def self.send_message(ref, text, registry: Registry.new, from_label: "peerpressure", wait: 0, fallbacks: self.fallbacks, **opts)
+    begin
+      peer = registry.find(ref)
+    rescue NotFound => not_found
+      return send_via_fallback(ref, text, fallbacks, from_label, not_found)
+    end
     Registration.open(name: from_label, config_dir: File.dirname(registry.dir)) do |reg|
       id = Sender.new(from_label: from_label, from: reg.address, **opts).deliver(peer, text)
       deadline = Time.now + [wait, Sender::SETTLE].max
@@ -37,4 +48,17 @@ module PeerPressure
       { delivery: Delivery.from(id, messages), messages: messages.select { |m| m.kind == :message } }
     end
   end
+
+  # No receipt exists on these transports, so the status is always :unconfirmed.
+  def self.send_via_fallback(ref, text, fallbacks, from_label, not_found)
+    fallbacks.each do |reg, sender_class|
+      peer = reg.find(ref)
+      id = sender_class.new(from_label: from_label).deliver(peer, text)
+      return { delivery: Delivery.new(msg_id: id, status: :unconfirmed, receipts: []), messages: [] }
+    rescue NotFound
+      next
+    end
+    raise not_found
+  end
+  private_class_method :send_via_fallback
 end

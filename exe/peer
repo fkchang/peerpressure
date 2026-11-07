@@ -39,10 +39,16 @@ begin
   case args.shift
   when "list"
     peers = PeerPressure.list
+    # Terminals the Claude registry cannot reach: herdr-core and plain herdr agents. Claude Code
+    # ones are already listed above, so they are dropped here.
+    extra = PeerPressure.fallbacks.flat_map { |reg, _| reg.peers }.reject { |p| p.kind == :claude_code }
     if json
-      puts JSON.pretty_generate(peers.map(&:to_h_for_json))
+      puts JSON.pretty_generate((peers + extra).map(&:to_h_for_json))
     else
-      peers.each { |p| puts format("%-6s %-5s %-40s %s  %s", p.kind, p.status, p.name, p.session_id[0, 8], p.cwd) }
+      (peers + extra).each do |p|
+        id = p.entrypoint.to_s.start_with?("herdr") ? p.session_id : p.session_id[0, 8] # herdr ids are short addresses
+        puts format("%-12s %-5s %-40s %s  %s", p.kind, p.status, p.name, id, p.cwd)
+      end
     end
   when "send"
     ref = args.shift or abort(parser.help)

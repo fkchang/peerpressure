@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- herdr transports: when a ref is not a Claude Code or Codex-bridge session, `peer send` / `PeerPressure.send_message` fall back to herdr-core terminals (`herdr-core ls` / `send`, so Copilot, Gemini and anything else in the herdr desktop app) and then plain herdr agents (`herdr agent list` / `prompt`). `peer list` shows them after the Claude sessions. These transports give no delivery receipt, so a send is always `:unconfirmed`. The plain-herdr JSON shape is unverified against a live server.
+
 ## 0.2.0
 
 - Canvas relay: `peer canvas-relay CANVAS` forwards StreamWeaver form submits to a pinned session as messages, re-pushes a delivery-status page with the answer kept and a Resend button, reconnects when the bridge restarts, and is idempotent per canvas.

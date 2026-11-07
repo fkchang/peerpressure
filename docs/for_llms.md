@@ -18,6 +18,7 @@ Ruby gem + CLI (`exe/peer`) to discover and message live Claude Code and Codex s
 - `lib/peerpressure/registration.rb`: registers THIS process (row + 0600 socket in a 0700 dir + accept loop into `#frames`). Required because the Codex receiver drops frames whose `from` isn't a live registered peer (`bridge.ts receive()`), silently. Hold one open for long-lived callers (canvas) so replies can arrive.
 - `lib/peerpressure/session.rb`, `message.rb`, `delivery.rb`: long-lived wrapper, parsed inbound frames (message / receipt / idle, envelope unwrapped), and the status fold.
 - `lib/peerpressure/peer.rb`: `kind` is `:codex` iff `entrypoint == "codex-claude-uds-bridge"`.
+- `lib/peerpressure/hc.rb`, `herdr.rb`: fallback transports for terminals the Claude registry can't see. `Hc` = herdr-core (`ls --json`, `send`; peers keyed by address `t4` or name, `kind` = the agent herdr detected). `Herdr` = plain herdr (`agent list`, `agent prompt NAME`; JSON shape unverified). Each is a `Registry` (`peers`, `find`) plus a `Sender` (`deliver`); runners are injectable. `PeerPressure.fallbacks` orders them; `send_message` tries them only after `Registry#find` raises `NotFound`, and always returns `:unconfirmed` with no replies.
 
 ## Canvas relay (`require "peerpressure/canvas"`, needs the stream_weaver gem)
 

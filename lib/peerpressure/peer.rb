@@ -1,6 +1,7 @@
 module PeerPressure
-  # One live session. kind is :claude or :codex (Codex tasks registered by the bridge
-  # plugin carry entrypoint "codex-claude-uds-bridge").
+  # One live session. kind is :claude or :codex from the Claude registry (Codex tasks registered by
+  # the bridge plugin carry entrypoint "codex-claude-uds-bridge"), or the agent name herdr reports
+  # (:copilot, :gemini, :claude_code, ...) for the herdr transports.
   Peer = Struct.new(:session_id, :name, :kind, :pid, :cwd, :status, :started_at, :socket_path, :entrypoint, :proc_start, keyword_init: true) do
     CODEX_ENTRYPOINT = "codex-claude-uds-bridge".freeze
 

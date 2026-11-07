@@ -106,6 +106,12 @@ Ordinary acceptance sends no receipt, so the gem refuses to lie to you.
 
 `peer send` exits 2 on `denied`, `expired`, `dropped` or `refused`.
 
+## Agents in herdr
+
+Anything running in a [herdr](https://herdr.dev) terminal that the Claude registry cannot see (Copilot, Gemini, a Codex without the bridge) is reachable too. `peer send REF` tries the Claude registry first, then herdr-core terminals (the desktop app: `REF` is a terminal address like `t4` or its name), then plain herdr agents (`REF` is the agent's live name). `peer list` shows them after the Claude sessions.
+
+These transports give no receipt, so a send reports `unconfirmed`, and there are no replies to wait for: read the answer in the terminal (`herdr-core read REF` or `herdr agent read REF`). Plain herdr refuses to prompt an agent that is waiting at an approval dialog.
+
 ## Codex
 
 Codex tasks appear in the same list once the [claude-uds-bridge](https://github.com/LeonKohli/claude-uds-bridge) plugin is installed and its hooks are trusted. A task registers when its first turn runs, so an untouched chat is invisible.
