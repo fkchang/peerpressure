@@ -11,17 +11,23 @@ to = nil
 foreground = false
 via = "relay"
 submit = /./
+authority = nil
+reply_file = nil
 parser = OptionParser.new do |o|
   o.banner = <<~BANNER
     Usage:
       peer list [--json]
       peer send REF [TEXT] [--from LABEL] [--wait SECONDS]          (TEXT or stdin)
+           [--authority info|request|approval] [--reply-to FILE]    wrap in a signed envelope (needs a grant in the policy file)
+      peer check [FILE]                                             judge a received message (or stdin); exit 2 if it must be refused
       peer canvas-relay CANVAS [--to REF] [--submit REGEX]          start (idempotent) a relay: form submits become messages
       peer canvas-relay stop CANVAS | list
       peer demo [CANVAS] [--to REF] [--via relay|reply-to]          push a demo form pinned to this session
       peer reply-to [--to REF]                                      print the value for `streamweaver canvas-push --reply-to`
   BANNER
   o.on("--json") { json = true }
+  o.on("--authority LEVEL", PeerPressure::Envelope::LEVELS, "what the message may ask of its receiver") { |v| authority = v }
+  o.on("--reply-to FILE", "file holding the received message this answers (keeps its ref, adds a hop)") { |v| reply_file = v }
   o.on("--from LABEL") { |v| from = v }
   o.on("--wait SECONDS", Float, "keep listening this long for replies") { |v| wait = v }
   o.on("--to REF", "target session (default: the session this runs inside)") { |v| to = v }
@@ -55,6 +61,10 @@ begin
     text = args.empty? ? $stdin.read : args.join(" ")
     opts = { wait: wait }
     opts[:from_label] = from if from
+    opts[:authority] = authority if authority
+    if reply_file
+      opts[:reply_to] = PeerPressure::Envelope.parse(File.read(reply_file)) or abort("peer: #{reply_file} carries no envelope")
+    end
     result = PeerPressure.send_message(ref, text, **opts)
     d = result[:delivery]
     if json
@@ -66,6 +76,16 @@ begin
       result[:messages].each { |m| puts "reply from #{m.from_name}: #{m.text}" }
     end
     exit 2 if d.failed?
+  when "check"
+    text = args.empty? ? $stdin.read : File.read(args.first)
+    env = PeerPressure::Envelope.parse(text)
+    decision = PeerPressure::Policy.new.check(env, to: ENV["CLAUDE_CODE_SESSION_ID"])
+    if json
+      puts JSON.generate(decision.to_h_for_json.merge(from: env&.from, ref: env&.ref, hops: env&.hops, id: env&.id))
+    else
+      puts "#{decision.ok ? 'accept' : 'REFUSE'}: act on it as #{decision.effective} (#{decision.reason})"
+    end
+    exit 2 unless decision.ok
   when "canvas-relay"
     require "peerpressure/canvas"
     lifecycle = PeerPressure::Canvas::Lifecycle.new

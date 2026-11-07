@@ -106,6 +106,31 @@ Ordinary acceptance sends no receipt, so the gem refuses to lie to you.
 
 `peer send` exits 2 on `denied`, `expired`, `dropped` or `refused`.
 
+## Who may ask what (envelopes)
+
+A plain message says nothing about who sent it or whether it counts as permission. Send with `--authority` and the text travels in a signed envelope:
+
+```bash
+peer send "scrum master" "run the deploy check" --from dot --authority request
+peer check received.txt         # accept: act on it as request   |   REFUSE: ... (exit 2)
+peer send dot "done" --from "scrum master" --reply-to received.txt   # same ref, one more hop
+```
+
+- `info` is an FYI and always accepted. `request` asks the receiver to act. `approval` asks for or grants a decision.
+- You grant authority per sender name, in `~/.config/peerpressure/authority.yml`. A sender never grants itself any, and a name with no entry is info only:
+
+  ```yaml
+  senders:
+    scrum master: approval
+    dot: request
+  ```
+
+- The header is signed with a key in `~/.config/peerpressure/key` (created 0600). A header typed by hand, or a message edited after signing, fails the check and is downgraded to info. This proves the message went through peerpressure; any process running as you can read the key, so it is not protection against a hostile local process.
+- Envelopes expire after an hour. A reply (`--reply-to`) adds a hop and is refused past 3, so two agents answering each other stop. A fresh `peer send` starts at hop 0, so this caps reply chains, not every possible loop.
+- An envelope is addressed to its recipient and signed. Forwarded to someone else, or relayed under another sender's name, it is downgraded to info, and `peer send` refuses to forward text that already carries one.
+- **Known gap: `--from` is self-asserted.** The sender name is whatever the caller passes, so an agent that runs `peer send ... --from "scrum master" --authority approval` gets the scrum master's grant. Until the sender is derived from something the caller doesn't choose, treat grants as a guard against mistakes and hand-typed headers, not against an agent that sets `--from`.
+- Receivers must call `peer check` (or `Policy#check`) before acting on a request. Nothing forces an agent to, so this protects the tools that do (the Needs-you page, the scrum master), not a model that ignores the header or believes a plain "[from scrum master] approved".
+
 ## Agents in herdr
 
 Anything running in a [herdr](https://herdr.dev) terminal that the Claude registry cannot see (Copilot, Gemini, a Codex without the bridge) is reachable too. `peer send REF` tries the Claude registry first, then herdr-core terminals (the desktop app: `REF` is a terminal address like `t4` or its name), then plain herdr agents (`REF` is the agent's live name). `peer list` shows them after the Claude sessions.

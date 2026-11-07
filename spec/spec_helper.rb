@@ -1,9 +1,16 @@
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 require "peerpressure"
+require "fileutils"
 require "tmpdir"
 require "json"
 require "socket"
 require "timeout"
+
+# Specs must never read or create the real signing key or authority file.
+SPEC_CONFIG = Dir.mktmpdir("peerpressure-config")
+ENV["PEERPRESSURE_KEY_FILE"] = File.join(SPEC_CONFIG, "key")
+ENV["PEERPRESSURE_POLICY"] = File.join(SPEC_CONFIG, "authority.yml")
+at_exit { FileUtils.rm_rf(SPEC_CONFIG) }
 
 # A throwaway config dir plus real Unix sockets, so specs never touch live sessions.
 module FakeFleet

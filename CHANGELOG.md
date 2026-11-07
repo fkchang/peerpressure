@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Envelope and authority: `peer send --authority info|request|approval [--reply-to FILE]` (or `send_message(authority:, reply_to:)`) wraps the text in a signed one-line header carrying id, sender, authority, hop count, expiry and ref. Authority is granted per sender name by Forrest in `~/.config/peerpressure/authority.yml`, never self-declared; with no file everyone is info only. `peer check [FILE]` (`Policy#check`) tells a receiver what to do: a missing or invalid signature is downgraded to info, an expired envelope, one past 3 hops, or an ask above the sender's grant is refused (exit 2). A sender claiming more than it is granted gets `Refused` before anything is sent. The envelope is addressed (`to`) and signed; one forwarded to another recipient or relayed under another name is downgraded to info, `send_message` refuses text that already carries an envelope, and `--reply-to` verifies the envelope it answers. Plain `peer send` without these flags is unchanged. Known gap: the sender name is self-asserted (`--from`), so grants guard against mistakes and hand-typed headers, not an agent that sets `--from`.
+
 - herdr transports: when a ref is not a Claude Code or Codex-bridge session, `peer send` / `PeerPressure.send_message` fall back to herdr-core terminals (`herdr-core ls` / `send`, so Copilot, Gemini and anything else in the herdr desktop app) and then plain herdr agents (`herdr agent list` / `prompt`). `peer list` shows them after the Claude sessions. These transports give no delivery receipt, so a send is always `:unconfirmed`. The plain-herdr JSON shape is unverified against a live server.
 
 ## 0.2.0
